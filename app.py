@@ -1,7 +1,7 @@
 import json, os
 import requests, streamlit as st
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 def secret(k):
     return os.getenv(k) or st.secrets.get(k, "")
