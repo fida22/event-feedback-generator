@@ -1,7 +1,9 @@
 import json, os
+import time
 import requests, streamlit as st
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+MODELS = [MODEL, "gemini-3.8-flash-lite", "gemini-2.5-flash-lite"]
 
 def secret(k):
     return os.getenv(k) or st.secrets.get(k, "")
@@ -16,26 +18,32 @@ Suggestions). 10-18 questions total. SCALE = 1-5 rating (no options). Use option
 MULTIPLE_CHOICE/CHECKBOX. Mix types. Reference the real activities and tools named. End with an
 optional open-ended suggestions question."""
 
+
+
+
+
 def generate(desc):
-    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{MODEL}:generateContent?key={secret('GEMINI_API_KEY')}")
     body = {
         "systemInstruction": {"parts": [{"text": SYSTEM}]},
         "contents": [{"parts": [{"text": desc}]}],
         "generationConfig": {"responseMimeType": "application/json"},
     }
     last = None
-    for _ in range(3):  # retry on API error or broken JSON
-        r = requests.post(url, json=body, timeout=60)
-        if r.status_code != 200:
-            last = r.text[:200]
-            continue
-        try:
-            txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(txt)
-        except Exception as e:
-            last = e
-    raise RuntimeError(f"Gemini failed: {last}")
+    for attempt in range(3):
+        for m in MODELS:
+            url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                   f"{m}:generateContent?key={secret('GEMINI_API_KEY')}")
+            try:
+                r = requests.post(url, json=body, timeout=60)
+                if r.status_code != 200:
+                    last = r.text[:200]
+                    continue  # try next model
+                txt = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                return json.loads(txt)
+            except Exception as e:
+                last = e
+        time.sleep(2 * (attempt + 1))  # wait 2s, 4s, 6s
+    raise RuntimeError(f"Gemini failed after retries: {last}")
 
 def create_form(spec):
     r = requests.post(secret("APPS_SCRIPT_URL"),
