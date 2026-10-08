@@ -43,7 +43,24 @@ def generate(desc):
             except Exception as e:
                 last = e
         time.sleep(2 * (attempt + 1))  # wait 2s, 4s, 6s
-    raise RuntimeError(f"Gemini failed after retries: {last}")
+    try:
+        return generate_groq(desc)
+    except Exception as e:
+        raise RuntimeError(f"Gemini and Groq both failed. Gemini: {last} | Groq: {e}")
+
+
+def generate_groq(desc):
+    r = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {secret('GROQ_API_KEY')}"},
+        json={"model": os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+              "response_format": {"type": "json_object"},
+              "messages": [{"role": "system", "content": SYSTEM},
+                           {"role": "user", "content": desc}]},
+        timeout=60)
+    r.raise_for_status()
+    return json.loads(r.json()["choices"][0]["message"]["content"])
+
 
 def create_form(spec):
     r = requests.post(secret("APPS_SCRIPT_URL"),
