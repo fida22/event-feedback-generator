@@ -1,6 +1,6 @@
 // Google Apps Script: Deploy > New deployment > Web app
 // Execute as: Me | Who has access: Anyone
-const TOKEN = 'CHANGE_ME_SECRET';
+const TOKEN = 'oct-8';
 
 function doPost(e) {
   try {
